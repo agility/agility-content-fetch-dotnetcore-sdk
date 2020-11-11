@@ -35,6 +35,13 @@ namespace Agility.Fetch
 			_baseUrl = $"{baseUrl}/{typeStr}";
 
 		}
+		
+		private Dictionary<string, string> GlobalCDNConfigurations = new Dictionary<string, string>
+		{
+			{"-c", "-ca"},
+			{"-d", "-dev"},
+			{"-u", ""}
+		};
 
 		public AgilityFetchClient(string guid, string apiKey, FetchMode fetchMode)
 		{
@@ -43,13 +50,36 @@ namespace Agility.Fetch
 				_staticHttpClient = new HttpClient();
 			}
 
+			if (string.IsNullOrEmpty(guid))
+			{
+				throw new ArgumentException("Invalid guid provided");
+			}
+
+			if (string.IsNullOrEmpty(apiKey))
+			{
+				throw new ArgumentException("Invalid apiKey provided");
+			}
+
+			var suffix = guid.Substring(guid.Length - 2);
+
 			_httpClient = _staticHttpClient;
 			_apiKey = apiKey;
 			_fetchMode = fetchMode;
-
-			string typeStr = fetchMode == FetchMode.Live ? "fetch" : "preview";
 			
-			_baseUrl = $"https://{guid}-api.agilitycms.cloud/{typeStr}";
+			string typeStr = fetchMode == FetchMode.Live ? "fetch" : "preview";
+
+			if (suffix.StartsWith("-") && GlobalCDNConfigurations.TryGetValue(suffix.ToLowerInvariant(), out var config))
+			{
+				_baseUrl = $"https://api{config}.aglty.io/{typeStr}";
+			}
+			else
+			{
+				_baseUrl = $"https://{guid}-api.agilitycms.cloud/{typeStr}";
+			}
+			
+			
+
+			
 
 		}
 		private void AuthorizeRequest(HttpRequestMessage request)
